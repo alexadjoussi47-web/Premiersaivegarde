@@ -3,13 +3,23 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API de la boutique numérique pour le Togo.
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Catalogue public
+  - name: orders
+    description: Commandes et suivi de paiement
+  - name: admin
+    description: Administration protégée
+  - name: storage
+    description: Uploads privés des fichiers produits
+  - name: contact
+    description: Messages du formulaire de contact
 paths:
   /healthz:
     get:
@@ -24,6 +34,373 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: Lister les produits disponibles
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 80
+      responses:
+        "200":
+          description: Catalogue public
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+  /products/{slug}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Obtenir un produit par son slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+      responses:
+        "200":
+          description: Produit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Produit introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /orders:
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Créer une commande en attente et son paiement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Commande créée, paiement en attente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderCheckout"
+        "400":
+          description: Informations invalides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Paiement temporairement indisponible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /orders/{orderId}:
+    get:
+      operationId: getOrderStatus
+      tags: [orders]
+      summary: Lire le statut sans le modifier
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Statut de commande
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderStatus"
+        "404":
+          description: Commande introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /webhooks/fedapay:
+    post:
+      operationId: receiveFedaPayEvent
+      tags: [orders]
+      summary: Recevoir un événement FedaPay signé
+      description: Le serveur vérifie la signature sur le corps brut avant tout traitement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FedaPayEventInput"
+      responses:
+        "200":
+          description: Événement reçu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookAck"
+        "400":
+          description: Corps ou signature invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/session:
+    get:
+      operationId: getAdminSession
+      tags: [admin]
+      summary: Vérifier la session administrateur
+      responses:
+        "200":
+          description: État de session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Ouvrir une session administrateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Session ouverte
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+        "401":
+          description: Identifiants incorrects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "429":
+          description: Trop de tentatives
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/logout:
+    post:
+      operationId: adminLogout
+      tags: [admin]
+      summary: Fermer la session administrateur
+      responses:
+        "200":
+          description: Session fermée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+  /admin/summary:
+    get:
+      operationId: getAdminSummary
+      tags: [admin]
+      summary: Résumé des ventes pour l’administration
+      responses:
+        "200":
+          description: Résumé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSummary"
+  /admin/orders:
+    get:
+      operationId: listAdminOrders
+      tags: [admin]
+      summary: Consulter les commandes
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, paid, failed]
+      responses:
+        "200":
+          description: Commandes récentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminOrder"
+        "401":
+          description: Session administrateur requise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/products/upload-url:
+    post:
+      operationId: requestProductUploadUrl
+      tags: [storage]
+      summary: Préparer un upload privé de produit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUploadInput"
+      responses:
+        "200":
+          description: URL temporaire de téléversement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductUploadResponse"
+        "401":
+          description: Session administrateur requise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/products:
+    post:
+      operationId: createProduct
+      tags: [admin]
+      summary: Ajouter un produit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Produit créé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          description: Informations invalides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Session administrateur requise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/products/{id}:
+    patch:
+      operationId: updateProduct
+      tags: [admin]
+      summary: Modifier un produit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Produit modifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "401":
+          description: Session administrateur requise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Produit introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    delete:
+      operationId: deleteProduct
+      tags: [admin]
+      summary: Désactiver un produit du catalogue
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "204":
+          description: Produit désactivé
+        "401":
+          description: Session administrateur requise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Produit introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /contact:
+    post:
+      operationId: submitContactMessage
+      tags: [contact]
+      summary: Envoyer un message à la boutique
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "201":
+          description: Message reçu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "400":
+          description: Message invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +410,269 @@ components:
           type: string
       required:
         - status
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    ActionResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+    Product:
+      type: object
+      required: [id, title, slug, type, category, description, priceFcfa, coverUrl, isActive]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+          enum: [ebook, formation]
+        category:
+          type: string
+        description:
+          type: string
+        priceFcfa:
+          type: integer
+        coverUrl:
+          type: [string, "null"]
+        isActive:
+          type: boolean
+    ProductUploadInput:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 180
+        size:
+          type: integer
+          minimum: 1
+          maximum: 1073741824
+        contentType:
+          type: string
+          minLength: 1
+          maxLength: 100
+    ProductUploadResponse:
+      type: object
+      required: [uploadURL, objectPath, uploadId]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        uploadId:
+          type: string
+          format: uuid
+    ProductInput:
+      type: object
+      required: [title, type, category, description, priceFcfa, uploadId]
+      properties:
+        title:
+          type: string
+          minLength: 2
+          maxLength: 160
+        type:
+          type: string
+          enum: [ebook, formation]
+        category:
+          type: string
+          minLength: 2
+          maxLength: 80
+        description:
+          type: string
+          minLength: 10
+          maxLength: 5000
+        priceFcfa:
+          type: integer
+          minimum: 1
+          maximum: 100000000
+        coverUrl:
+          type: [string, "null"]
+          maxLength: 2048
+        uploadId:
+          type: string
+          format: uuid
+    ProductUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 2
+          maxLength: 160
+        type:
+          type: string
+          enum: [ebook, formation]
+        category:
+          type: string
+          minLength: 2
+          maxLength: 80
+        description:
+          type: string
+          minLength: 10
+          maxLength: 5000
+        priceFcfa:
+          type: integer
+          minimum: 1
+          maximum: 100000000
+        coverUrl:
+          type: [string, "null"]
+          maxLength: 2048
+        uploadId:
+          type: string
+          format: uuid
+    OrderInput:
+      type: object
+      required: [productId, customerName, email, phone, paymentMethod]
+      properties:
+        productId:
+          type: integer
+          minimum: 1
+        customerName:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 24
+        paymentMethod:
+          type: string
+          enum: [mixx_by_yas, flooz]
+    OrderCheckout:
+      type: object
+      required: [orderId, productTitle, amountFcfa, paymentMethod, status, checkoutUrl, createdAt]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        productTitle:
+          type: string
+        amountFcfa:
+          type: integer
+        paymentMethod:
+          type: string
+          enum: [mixx_by_yas, flooz]
+        status:
+          type: string
+          enum: [pending, paid, failed]
+        checkoutUrl:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+    OrderStatus:
+      type: object
+      required: [orderId, productTitle, amountFcfa, paymentMethod, status, createdAt]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        productTitle:
+          type: string
+        amountFcfa:
+          type: integer
+        paymentMethod:
+          type: string
+          enum: [mixx_by_yas, flooz]
+        status:
+          type: string
+          enum: [pending, paid, failed]
+        createdAt:
+          type: string
+          format: date-time
+    WebhookAck:
+      type: object
+      required: [received]
+      properties:
+        received:
+          type: boolean
+    FedaPayEventInput:
+      type: object
+      additionalProperties: true
+    AdminLoginInput:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 1
+          maxLength: 256
+    AdminSession:
+      type: object
+      required: [authenticated]
+      properties:
+        authenticated:
+          type: boolean
+    AdminOrder:
+      type: object
+      required: [orderId, customerName, email, phone, productTitle, amountFcfa, paymentMethod, status, createdAt]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        productTitle:
+          type: string
+        amountFcfa:
+          type: integer
+        paymentMethod:
+          type: string
+          enum: [mixx_by_yas, flooz]
+        status:
+          type: string
+          enum: [pending, paid, failed]
+        createdAt:
+          type: string
+          format: date-time
+    AdminSummary:
+      type: object
+      required: [totalOrders, pendingOrders, paidOrders, revenueFcfa, activeProducts]
+      properties:
+        totalOrders:
+          type: integer
+        pendingOrders:
+          type: integer
+        paidOrders:
+          type: integer
+        revenueFcfa:
+          type: integer
+        activeProducts:
+          type: integer
+    ContactInput:
+      type: object
+      required: [name, email, message]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        message:
+          type: string
+          minLength: 10
+          maxLength: 5000
 

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Boutique Digitale Togo"
+description = "Boutique en ligne mobile-first pour acheter des ebooks et formations numériques au Togo, avec paiement mobile money et livraison sécurisée par e-mail."
+version = "1.0.0"
+id = "artifacts/boutique-digitale-togo"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18328
+
+[services.development]
+run = "pnpm --filter @workspace/boutique-digitale-togo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/boutique-digitale-togo", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/boutique-digitale-togo/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18328"
+BASE_PATH = "/"
