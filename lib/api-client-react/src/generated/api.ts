@@ -473,6 +473,83 @@ export function useGetOrderStatus<TData = Awaited<ReturnType<typeof getOrderStat
 
 
 
+export const getDownloadOrderFileUrl = (token: string,) => {
+
+
+
+
+  return `/api/downloads/${token}`
+}
+
+/**
+ * @summary Télécharger le fichier après paiement vérifié
+ */
+export const downloadOrderFile = async (token: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadOrderFileUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadOrderFileQueryKey = (token: string,) => {
+    return [
+    `/api/downloads/${token}`
+    ] as const;
+    }
+
+
+export const getDownloadOrderFileQueryOptions = <TData = Awaited<ReturnType<typeof downloadOrderFile>>, TError = ErrorType<ErrorEnvelope>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadOrderFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadOrderFileQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadOrderFile>>> = ({ signal }) => downloadOrderFile(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadOrderFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadOrderFileQueryResult = NonNullable<Awaited<ReturnType<typeof downloadOrderFile>>>
+export type DownloadOrderFileQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary Télécharger le fichier après paiement vérifié
+ */
+
+export function useDownloadOrderFile<TData = Awaited<ReturnType<typeof downloadOrderFile>>, TError = ErrorType<ErrorEnvelope>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadOrderFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadOrderFileQueryOptions(token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getReceiveFedaPayEventUrl = () => {
 
 
@@ -962,39 +1039,25 @@ export function useListAdminOrders<TData = Awaited<ReturnType<typeof listAdminOr
 
 
 
-export const getRequestProductUploadUrlUrl = () => {
+export const getListAdminProductsUrl = () => {
 
 
 
 
-  return `/api/admin/products/upload-url`
+  return `/api/admin/products`
 }
 
 /**
- * @summary Préparer un upload privé de produit
+ * @summary Lister tous les produits pour l’administration
  */
-export const requestProductUploadUrl = async (productUploadInput: ProductUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<ProductUploadResponse> => {
+export const listAdminProducts = async ( options?: Parameters<typeof customFetch>[1]): Promise<Product[]> => {
 
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return customFetch<ProductUploadResponse>(getRequestProductUploadUrlUrl(),
+  return customFetch<Product[]>(getListAdminProductsUrl(),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(productUploadInput)
+    method: 'GET'
+
+
   }
 );}
 
@@ -1002,53 +1065,56 @@ return customFetch<ProductUploadResponse>(getRequestProductUploadUrlUrl(),
 
 
 
-export const getRequestProductUploadUrlMutationKey = () => ['requestProductUploadUrl'] as const;
-
-export const getRequestProductUploadUrlMutationOptions = <TError = ErrorType<ErrorEnvelope>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestProductUploadUrl>>, TError,RequestProductUploadUrlMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof requestProductUploadUrl>>, TError,RequestProductUploadUrlMutationVariables, TContext> => {
-
-const mutationKey = getRequestProductUploadUrlMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestProductUploadUrl>>, RequestProductUploadUrlMutationVariables> = (props) => {
-          const {data} = props ?? {};
-
-          return  requestProductUploadUrl(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RequestProductUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestProductUploadUrl>>>
-    export type RequestProductUploadUrlMutationBody = BodyType<ProductUploadInput>
-    export type RequestProductUploadUrlMutationError = ErrorType<ErrorEnvelope>
-    export type RequestProductUploadUrlMutationVariables = {data: BodyType<ProductUploadInput>}
-
-    /**
- * @summary Préparer un upload privé de produit
- */
-export const useRequestProductUploadUrl = <TError = ErrorType<ErrorEnvelope>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestProductUploadUrl>>, TError,RequestProductUploadUrlMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof requestProductUploadUrl>>,
-        TError,
-        RequestProductUploadUrlMutationVariables,
-        TContext
-      > => {
-      return useMutation(getRequestProductUploadUrlMutationOptions(options));
+export const getListAdminProductsQueryKey = () => {
+    return [
+    `/api/admin/products`
+    ] as const;
     }
+
+
+export const getListAdminProductsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminProducts>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminProductsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminProducts>>> = ({ signal }) => listAdminProducts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminProducts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminProductsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminProducts>>>
+export type ListAdminProductsQueryError = ErrorType<ErrorEnvelope>
+
+
+/**
+ * @summary Lister tous les produits pour l’administration
+ */
+
+export function useListAdminProducts<TData = Awaited<ReturnType<typeof listAdminProducts>>, TError = ErrorType<ErrorEnvelope>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminProductsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getCreateProductUrl = () => {
 
@@ -1136,6 +1202,94 @@ export const useCreateProduct = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getCreateProductMutationOptions(options));
+    }
+
+export const getRequestProductUploadUrlUrl = () => {
+
+
+
+
+  return `/api/admin/products/upload-url`
+}
+
+/**
+ * @summary Préparer un upload privé de produit
+ */
+export const requestProductUploadUrl = async (productUploadInput: ProductUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<ProductUploadResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ProductUploadResponse>(getRequestProductUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(productUploadInput)
+  }
+);}
+
+
+
+
+
+export const getRequestProductUploadUrlMutationKey = () => ['requestProductUploadUrl'] as const;
+
+export const getRequestProductUploadUrlMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestProductUploadUrl>>, TError,RequestProductUploadUrlMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestProductUploadUrl>>, TError,RequestProductUploadUrlMutationVariables, TContext> => {
+
+const mutationKey = getRequestProductUploadUrlMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestProductUploadUrl>>, RequestProductUploadUrlMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestProductUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestProductUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestProductUploadUrl>>>
+    export type RequestProductUploadUrlMutationBody = BodyType<ProductUploadInput>
+    export type RequestProductUploadUrlMutationError = ErrorType<ErrorEnvelope>
+    export type RequestProductUploadUrlMutationVariables = {data: BodyType<ProductUploadInput>}
+
+    /**
+ * @summary Préparer un upload privé de produit
+ */
+export const useRequestProductUploadUrl = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestProductUploadUrl>>, TError,RequestProductUploadUrlMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestProductUploadUrl>>,
+        TError,
+        RequestProductUploadUrlMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestProductUploadUrlMutationOptions(options));
     }
 
 export const getUpdateProductUrl = (id: number,) => {

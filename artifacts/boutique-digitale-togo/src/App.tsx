@@ -3,9 +3,9 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import {
   useAdminLogin, useAdminLogout, useCreateOrder, useCreateProduct, useDeleteProduct,
   useGetAdminSession, useGetAdminSummary, useGetOrderStatus, useGetProduct,
-  useListAdminOrders, useListProducts, useRequestProductUploadUrl, useSubmitContactMessage,
+  useListAdminOrders, useListAdminProducts, useListProducts, useRequestProductUploadUrl, useSubmitContactMessage,
   useUpdateProduct, getGetAdminSessionQueryKey, getGetAdminSummaryQueryKey,
-  getGetOrderStatusQueryKey, getListAdminOrdersQueryKey,
+  getGetOrderStatusQueryKey, getListAdminOrdersQueryKey, getListAdminProductsQueryKey,
 } from '@workspace/api-client-react';
 import type { AdminOrder, Product, ProductInput, ProductUpdate } from '@workspace/api-client-react';
 import {
@@ -103,7 +103,7 @@ function ProductsGrid({ products, loading, error, onRetry }: { products?: Produc
 }
 
 function HomePage() {
-  const products = useListProducts();
+  const products = useListAdminProducts({ request: { credentials: 'include' } });
   const featured = useMemo(() => products.data?.slice(0, 3), [products.data]);
   return <Shell><section className="site-wrap grid gap-10 pb-16 pt-10 md:grid-cols-[1.02fr_.98fr] md:items-center md:pb-24 md:pt-16">
     <div className="reveal">
@@ -357,6 +357,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const filteredOrders = useMemo(() => orders.data?.filter((order) => orderFilter === 'all' || order.status === orderFilter), [orders.data, orderFilter]);
   const invalidate = () => {
     void client.invalidateQueries({ queryKey: ['/api/products'] });
+    void client.invalidateQueries({ queryKey: getListAdminProductsQueryKey() });
     void client.invalidateQueries({ queryKey: getGetAdminSummaryQueryKey() });
     void client.invalidateQueries({ queryKey: getListAdminOrdersQueryKey({}) });
     setFormOpen(false); setEditing(undefined);

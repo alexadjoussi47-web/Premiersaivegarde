@@ -142,6 +142,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /downloads/{token}:
+    get:
+      operationId: downloadOrderFile
+      tags: [orders]
+      summary: Télécharger le fichier après paiement vérifié
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 64
+            maxLength: 64
+      responses:
+        "200":
+          description: Fichier produit diffusé de manière privée
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Lien invalide, expiré ou épuisé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /webhooks/fedapay:
     post:
       operationId: receiveFedaPayEvent
@@ -260,31 +291,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
-  /admin/products/upload-url:
-    post:
-      operationId: requestProductUploadUrl
-      tags: [storage]
-      summary: Préparer un upload privé de produit
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ProductUploadInput"
+  /admin/products:
+    get:
+      operationId: listAdminProducts
+      tags: [admin]
+      summary: Lister tous les produits pour l’administration
       responses:
         "200":
-          description: URL temporaire de téléversement
+          description: Produits actifs et désactivés
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProductUploadResponse"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
         "401":
           description: Session administrateur requise
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
-  /admin/products:
     post:
       operationId: createProduct
       tags: [admin]
@@ -308,6 +334,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Session administrateur requise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /admin/products/upload-url:
+    post:
+      operationId: requestProductUploadUrl
+      tags: [storage]
+      summary: Préparer un upload privé de produit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUploadInput"
+      responses:
+        "200":
+          description: URL temporaire de téléversement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductUploadResponse"
         "401":
           description: Session administrateur requise
           content:

@@ -120,6 +120,21 @@ export const GetOrderStatusResponse = zod.object({
 
 
 /**
+ * @summary Télécharger le fichier après paiement vérifié
+ */
+export const downloadOrderFilePathTokenMin = 64;
+export const downloadOrderFilePathTokenMax = 64;
+
+
+
+export const DownloadOrderFileParams = zod.object({
+  "token": zod.coerce.string().min(downloadOrderFilePathTokenMin).max(downloadOrderFilePathTokenMax)
+})
+
+export const DownloadOrderFileResponse = zod.unknown()
+
+
+/**
  * Le serveur vérifie la signature sur le corps brut avant tout traitement.
  * @summary Recevoir un événement FedaPay signé
  */
@@ -196,27 +211,20 @@ export const ListAdminOrdersResponse = zod.array(ListAdminOrdersResponseItem)
 
 
 /**
- * @summary Préparer un upload privé de produit
+ * @summary Lister tous les produits pour l’administration
  */
-export const requestProductUploadUrlBodyNameMax = 180;
-
-export const requestProductUploadUrlBodySizeMax = 1073741824;
-
-export const requestProductUploadUrlBodyContentTypeMax = 100;
-
-
-
-export const RequestProductUploadUrlBody = zod.object({
-  "name": zod.string().min(1).max(requestProductUploadUrlBodyNameMax),
-  "size": zod.number().int().min(1).max(requestProductUploadUrlBodySizeMax),
-  "contentType": zod.string().min(1).max(requestProductUploadUrlBodyContentTypeMax)
+export const ListAdminProductsResponseItem = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "slug": zod.string(),
+  "type": zod.enum(['ebook', 'formation']),
+  "category": zod.string(),
+  "description": zod.string(),
+  "priceFcfa": zod.number().int(),
+  "coverUrl": zod.string().nullable(),
+  "isActive": zod.boolean()
 })
-
-export const RequestProductUploadUrlResponse = zod.object({
-  "uploadURL": zod.string().url(),
-  "objectPath": zod.string(),
-  "uploadId": zod.string().uuid()
-})
+export const ListAdminProductsResponse = zod.array(ListAdminProductsResponseItem)
 
 
 /**
@@ -257,6 +265,30 @@ export const CreateProductResponse = zod.object({
   "priceFcfa": zod.number().int(),
   "coverUrl": zod.string().nullable(),
   "isActive": zod.boolean()
+})
+
+
+/**
+ * @summary Préparer un upload privé de produit
+ */
+export const requestProductUploadUrlBodyNameMax = 180;
+
+export const requestProductUploadUrlBodySizeMax = 1073741824;
+
+export const requestProductUploadUrlBodyContentTypeMax = 100;
+
+
+
+export const RequestProductUploadUrlBody = zod.object({
+  "name": zod.string().min(1).max(requestProductUploadUrlBodyNameMax),
+  "size": zod.number().int().min(1).max(requestProductUploadUrlBodySizeMax),
+  "contentType": zod.string().min(1).max(requestProductUploadUrlBodyContentTypeMax)
+})
+
+export const RequestProductUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "uploadId": zod.string().uuid()
 })
 
 
