@@ -103,7 +103,7 @@ function ProductsGrid({ products, loading, error, onRetry }: { products?: Produc
 }
 
 function HomePage() {
-  const products = useListAdminProducts({ request: { credentials: 'include' } });
+  const products = useListProducts();
   const featured = useMemo(() => products.data?.slice(0, 3), [products.data]);
   return <Shell><section className="site-wrap grid gap-10 pb-16 pt-10 md:grid-cols-[1.02fr_.98fr] md:items-center md:pb-24 md:pt-16">
     <div className="reveal">
@@ -303,22 +303,22 @@ function ProductForm({ product, onClose, onSaved }: { product?: Product; onClose
     const description = String(form.get('description') || '').trim();
     const priceFcfa = Number(form.get('priceFcfa'));
     try {
-      let uploaded: { uploadId: string; objectPath: string } | null = null;
+      let uploaded: { uploadId: string } | null = null;
       if (file && file.size > 0) {
         setUploading(true);
         const ticket = await requestUpload.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type || 'application/octet-stream' } });
         const result = await fetch(ticket.uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
         if (!result.ok) throw new Error('Le fichier n’a pas pu être téléversé. Réessayez.');
-        uploaded = { uploadId: ticket.uploadId, objectPath: ticket.objectPath };
+        uploaded = { uploadId: ticket.uploadId };
         setUploading(false);
       }
       if (!product && !uploaded) throw new Error('Ajoutez un fichier numérique pour créer la ressource.');
       if (product) {
         const data: ProductUpdate = { title, type, category, description, priceFcfa };
-        if (uploaded) { data.uploadId = uploaded.uploadId; data.coverUrl = `/api/storage${uploaded.objectPath}`; }
+        if (uploaded) data.uploadId = uploaded.uploadId;
         await update.mutateAsync({ id: product.id, data });
       } else {
-        const data: ProductInput = { title, type, category, description, priceFcfa, uploadId: uploaded!.uploadId, coverUrl: `/api/storage${uploaded!.objectPath}` };
+        const data: ProductInput = { title, type, category, description, priceFcfa, uploadId: uploaded!.uploadId };
         await create.mutateAsync({ data });
       }
       onSaved();
@@ -335,7 +335,7 @@ function ProductForm({ product, onClose, onSaved }: { product?: Product; onClose
         <label className="text-sm font-bold">Catégorie<input required minLength={2} maxLength={80} name="category" defaultValue={product?.category} className="field mt-2" placeholder="Ex. Entrepreneuriat" data-testid="input-product-category"/></label>
         <label className="text-sm font-bold">Prix (FCFA)<input required min={1} max={100000000} type="number" name="priceFcfa" defaultValue={product?.priceFcfa} className="field mt-2" data-testid="input-product-price"/></label>
         <label className="text-sm font-bold sm:col-span-2">Description<textarea required minLength={10} maxLength={5000} name="description" defaultValue={product?.description} className="field mt-2 min-h-28 resize-y" data-testid="input-product-description"/></label>
-        <label className="cursor-pointer rounded-xl border border-dashed border-border bg-muted/50 p-4 text-sm sm:col-span-2"><span className="flex items-center gap-2 font-bold"><Upload size={17} className="text-primary"/>Fichier numérique {product && <span className="font-normal text-muted-foreground">(optionnel si aucun remplacement)</span>}</span><input className="mt-3 block w-full text-xs text-muted-foreground file:mr-3 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:font-bold file:text-primary-foreground" type="file" name="file" data-testid="input-product-file"/><span className="mt-2 block text-xs text-muted-foreground">Le fichier sera téléversé de manière sécurisée avant l’enregistrement.</span></label>
+        <label className="cursor-pointer rounded-xl border border-dashed border-border bg-muted/50 p-4 text-sm sm:col-span-2"><span className="flex items-center gap-2 font-bold"><Upload size={17} className="text-primary"/>Fichier numérique {product && <span className="font-normal text-muted-foreground">(optionnel si aucun remplacement)</span>}</span><input className="mt-3 block w-full text-xs text-muted-foreground file:mr-3 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:font-bold file:text-primary-foreground" type="file" name="file" accept=".pdf,.epub,.zip,.mp4,.mp3,.pptx,.docx" data-testid="input-product-file"/><span className="mt-2 block text-xs text-muted-foreground">Fichier privé (PDF, EPUB, ZIP, MP4, MP3, PPTX ou DOCX), jusqu’à 1 Go.</span></label>
       </div>
       {error && <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">{error}</p>}
       <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" className="btn-secondary" onClick={onClose} data-testid="button-cancel-product">Annuler</button><button className="btn-primary disabled:opacity-60" disabled={busy} type="submit" data-testid="button-save-product">{busy ? 'Enregistrement…' : product ? 'Enregistrer les modifications' : 'Créer la ressource'}{!busy && <Check size={16}/>}</button></div>
@@ -347,7 +347,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const client = useQueryClient();
   const summary = useGetAdminSummary({ request: { credentials: 'include' } });
   const orders = useListAdminOrders({}, { request: { credentials: 'include' } });
-  const products = useListProducts();
+  const products = useListAdminProducts({ request: { credentials: 'include' } });
   const deleteProduct = useDeleteProduct({ request: { credentials: 'include' } });
   const logout = useAdminLogout({ request: { credentials: 'include' } });
   const [editing, setEditing] = useState<Product | undefined>();

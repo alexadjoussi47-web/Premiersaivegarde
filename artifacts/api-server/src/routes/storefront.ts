@@ -85,6 +85,13 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function normalizeTogoPhone(value: string): string | null {
+  let digits = value.replace(/\D/g, "");
+  if (digits.startsWith("00228")) digits = digits.slice(2);
+  if (digits.startsWith("228") && digits.length === 11) digits = digits.slice(3);
+  return digits.length === 8 ? `+228${digits}` : null;
+}
+
 router.get("/products", async (req, res) => {
   const parsed = ListProductsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -134,13 +141,29 @@ router.get("/products/:slug", async (req, res) => {
 });
 
 router.post("/orders", orderLimiter, async (req, res) => {
-  const parsed = CreateOrderBody.safeParse(req.body);
-  if (!parsed.success || !/^[0-9+()\s.-]{8,24}$/.test(parsed.data?.phone ?? "")) {
+  const raw =
+    typeof req.body === "object" && req.body !== null
+      ? (req.body as Record<string, unknown>)
+      : {};
+  const candidate = {
+    ...raw,
+    customerName:
+      typeof raw.customerName === "string" ? raw.customerName.trim() : raw.customerName,
+    email: typeof raw.email === "string" ? raw.email.trim() : raw.email,
+    phone: typeof raw.phone === "string" ? raw.phone.trim() : raw.phone,
+  };
+  const parsed = CreateOrderBody.safeParse(candidate);
+  if (
+    !parsed.success ||
+    parsed.data.customerName.trim().length < 2 ||
+    !normalizeTogoPhone(parsed.data.phone)
+  ) {
     errorResponse(res, 400, "Coordonnées de commande invalides.");
     return;
   }
 
   const input = parsed.data;
+  const phone = normalizeTogoPhone(input.phone)!;
   const [product] = await db
     .select()
     .from(productsTable)
@@ -172,7 +195,7 @@ router.post("/orders", orderLimiter, async (req, res) => {
       amountFcfa: product.priceFcfa,
       customerName: input.customerName.trim(),
       email: input.email.trim().toLowerCase(),
-      phone: input.phone.trim(),
+      phone,
       siteOrigin,
       paymentMethod: input.paymentMethod,
       status: "pending",
@@ -188,7 +211,7 @@ router.post("/orders", orderLimiter, async (req, res) => {
       customer: {
         name: order.customerName,
         email: order.email,
-        phone: order.phone,
+        phone: order.phone.replace(/^\+228/, ""),
       },
       callbackUrl,
     });
@@ -313,8 +336,22 @@ router.get("/downloads/:token", async (req, res) => {
 });
 
 router.post("/contact", contactLimiter, async (req, res) => {
-  const parsed = SubmitContactMessageBody.safeParse(req.body);
-  if (!parsed.success) {
+  const raw =
+    typeof req.body === "object" && req.body !== null
+      ? (req.body as Record<string, unknown>)
+      : {};
+  const candidate = {
+    ...raw,
+    name: typeof raw.name === "string" ? raw.name.trim() : raw.name,
+    email: typeof raw.email === "string" ? raw.email.trim() : raw.email,
+    message: typeof raw.message === "string" ? raw.message.trim() : raw.message,
+  };
+  const parsed = SubmitContactMessageBody.safeParse(candidate);
+  if (
+    !parsed.success ||
+    parsed.data.name.length < 2 ||
+    parsed.data.message.length < 10
+  ) {
     errorResponse(res, 400, "Informations de contact invalides.");
     return;
   }

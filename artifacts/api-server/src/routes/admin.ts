@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter } from "express";
 import { rateLimit } from "express-rate-limit";
-import { and, count, desc, eq, lt, sql } from "drizzle-orm";
+import { count, desc, eq, lt, sql } from "drizzle-orm";
 import {
   AdminLoginBody,
   CreateProductBody,
@@ -11,7 +11,6 @@ import {
   UpdateProductParams,
 } from "@workspace/api-zod";
 import {
-  adminCredentialsTable,
   db,
   ordersTable,
   productUploadsTable,
@@ -290,7 +289,18 @@ router.post("/admin/products/upload-url", async (req, res) => {
 });
 
 router.post("/admin/products", async (req, res) => {
-  const parsed = CreateProductBody.safeParse(req.body);
+  const raw =
+    typeof req.body === "object" && req.body !== null
+      ? (req.body as Record<string, unknown>)
+      : {};
+  const candidate = {
+    ...raw,
+    title: typeof raw.title === "string" ? raw.title.trim() : raw.title,
+    category: typeof raw.category === "string" ? raw.category.trim() : raw.category,
+    description:
+      typeof raw.description === "string" ? raw.description.trim() : raw.description,
+  };
+  const parsed = CreateProductBody.safeParse(candidate);
   if (!parsed.success) {
     res.status(400).json({ error: "Informations de produit invalides." });
     return;
@@ -343,7 +353,18 @@ router.post("/admin/products", async (req, res) => {
 
 router.patch("/admin/products/:id", async (req, res) => {
   const params = UpdateProductParams.safeParse(req.params);
-  const body = UpdateProductBody.safeParse(req.body);
+  const raw =
+    typeof req.body === "object" && req.body !== null
+      ? (req.body as Record<string, unknown>)
+      : {};
+  const candidate = {
+    ...raw,
+    title: typeof raw.title === "string" ? raw.title.trim() : raw.title,
+    category: typeof raw.category === "string" ? raw.category.trim() : raw.category,
+    description:
+      typeof raw.description === "string" ? raw.description.trim() : raw.description,
+  };
+  const body = UpdateProductBody.safeParse(candidate);
   if (!params.success || !body.success) {
     res.status(400).json({ error: "Informations de produit invalides." });
     return;

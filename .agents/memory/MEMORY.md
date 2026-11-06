@@ -1,0 +1,1 @@
+- [FedaPay checkout](fedapay-checkout.md) — keep Mixx/Flooz on direct FedaPay sandbox; only a verified server webhook can mark orders paid.

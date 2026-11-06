@@ -3,6 +3,7 @@ import {
   pgEnum,
   pgTable,
   serial,
+  text,
   timestamp,
   uniqueIndex,
   uuid,

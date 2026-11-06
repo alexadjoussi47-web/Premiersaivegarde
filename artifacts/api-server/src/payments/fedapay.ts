@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Webhook } from "fedapay";
 import type {
   CreatePaymentInput,
@@ -178,7 +179,9 @@ export const fedapayProvider: PaymentProvider = {
       return {
         eventName: eventName || "unknown",
         transactionId: "",
-        eventKey: `${eventName || "unknown"}:${eventId}`,
+        eventKey: createHash("sha256")
+          .update(`${eventName || "unknown"}:${eventId}`)
+          .digest("hex"),
       };
     }
     const transactionId = getTransactionFromEvent(event ?? {});
@@ -190,7 +193,9 @@ export const fedapayProvider: PaymentProvider = {
     return {
       eventName,
       transactionId,
-      eventKey: `${eventName}:${transactionId}:${eventId}`,
+      eventKey: createHash("sha256")
+        .update(`${eventName}:${transactionId}:${eventId}`)
+        .digest("hex"),
     };
   },
 
